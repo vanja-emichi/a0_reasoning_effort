@@ -8,3 +8,10 @@ class ReasoningEffortOverride(Extension):
         effort = get_override(self.agent) if self.agent and model else ""
         if effort and isinstance(getattr(model, "kwargs", None), dict):
             model.kwargs["reasoning_effort"] = effort
+            # Custom OpenAI-compatible providers (z.ai and the like) drop unknown
+            # top-level params under drop_params, so mirror the effort into
+            # extra_body -- litellm forwards it verbatim, and it overrides any
+            # provider-level default extra_body.reasoning_effort.
+            extra_body = dict(model.kwargs.get("extra_body") or {})
+            extra_body["reasoning_effort"] = effort
+            model.kwargs["extra_body"] = extra_body
