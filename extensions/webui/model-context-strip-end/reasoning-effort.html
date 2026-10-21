@@ -30,10 +30,9 @@
                   showEffortDropdown = !showEffortDropdown;
                   if (showEffortDropdown) customEffort = $store.reasoningEffort.customValue();
                 ">
-          <span class="material-symbols-outlined" style="font-size: 16px;">psychology</span>
+          <x-icon name="psychology" style="font-size: 16px;"></x-icon>
           <span class="model-switcher-label" x-text="$store.reasoningEffort.buttonLabel()"></span>
-          <span class="material-symbols-outlined" style="font-size: 0.7rem;"
-                x-text="showEffortDropdown ? 'expand_less' : 'expand_more'"></span>
+          <x-icon :name="showEffortDropdown ? 'expand_less' : 'expand_more'" style="font-size: 0.7rem;"></x-icon>
         </button>
 
         <div class="model-switcher-dropdown reasoning-effort-dropdown"
@@ -47,7 +46,7 @@
                   :disabled="$store.reasoningEffort.saving"
                   @click="$store.reasoningEffort.select('').then(ok => { if (ok) showEffortDropdown = false; })">
             <span x-text="$store.reasoningEffort.defaultLabel()"></span>
-            <span class="material-symbols-outlined" x-show="!$store.reasoningEffort.selected" style="font-size: 15px;">check</span>
+            <x-icon name="check" x-show="!$store.reasoningEffort.selected" style="font-size: 15px;"></x-icon>
           </button>
 
           <div class="model-switcher-divider" x-show="$store.reasoningEffort.options.length"></div>
@@ -59,7 +58,7 @@
                     :disabled="$store.reasoningEffort.saving"
                     @click="$store.reasoningEffort.select(option.value).then(ok => { if (ok) showEffortDropdown = false; })">
               <span x-text="option.label"></span>
-              <span class="material-symbols-outlined" x-show="$store.reasoningEffort.selected === option.value" style="font-size: 15px;">check</span>
+              <x-icon name="check" x-show="$store.reasoningEffort.selected === option.value" style="font-size: 15px;"></x-icon>
             </button>
           </template>
 
