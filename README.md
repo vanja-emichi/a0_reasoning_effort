@@ -21,7 +21,7 @@ configuration may also declare a custom `reasoning_efforts` vocabulary.
 
 ## Install
 
-Place this directory at `usr/plugins/a0_reasoning_effort` in Agent Zero, then reload the WebUI. No additional dependencies are required.
+Place this directory at `usr/plugins/a0_reasoning_effort` in Agent Zero, then reload the WebUI. Requires the bundled `_model_config` plugin (model capability lookup and chat-model config); no other dependencies.
 
 ## Check
 
