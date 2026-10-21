@@ -22,7 +22,6 @@ PROVIDER_TIMEOUT_SECONDS = 5.0
 PROVIDER_METADATA_IDS = frozenset({"a0_venice", "venice", "openrouter"})
 _provider_models_cache: dict[tuple[str, str], tuple[float, Any]] = {}
 
-
 def normalize_effort(value: Any) -> str:
     effort = str(value or "").strip().lower()
     return effort if not effort or CUSTOM_EFFORT_PATTERN.fullmatch(effort) else ""
@@ -94,6 +93,24 @@ def _supported_efforts(litellm_provider: str, model: str) -> tuple[str, ...]:
     if "reasoning_effort" not in (params or ()) or info.get("supports_reasoning") is not True:
         return ()
     return _efforts_from_info(info)
+
+
+def supported_efforts_for(
+    litellm_provider: str,
+    model: str,
+    *,
+    declared_efforts: tuple[str, ...] = (),
+) -> tuple[str, ...]:
+    """Efforts the model supports.
+
+    Provider-declared capability (``reasoning_efforts`` in the provider config)
+    wins: custom OpenAI-compatible endpoints (e.g. z.ai) are reasoning-blind to
+    litellm, so their vocabulary is declared where the provider is defined.
+    Native providers fall back to litellm's own capability detection.
+    """
+    if declared_efforts:
+        return declared_efforts
+    return _supported_efforts(litellm_provider, model)
 
 
 def _effort_label(effort: str, litellm_provider: str, model: str) -> str:
@@ -227,10 +244,19 @@ def get_state(agent) -> dict[str, Any]:
         litellm_provider = "openai"
 
     is_glm53_model = is_glm53(provider, model)
+    declared = tuple(
+        str(e).strip().lower()
+        for e in (provider_config.get("reasoning_efforts") or ())
+        if str(e).strip()
+    )
     efforts = (
-        GLM53_EFFORTS
+        supported_efforts_for(litellm_provider, model, declared_efforts=declared)
+        if declared
+        else GLM53_EFFORTS
         if is_glm53_model
-        else _supported_efforts(litellm_provider, model) if provider and model else ()
+        else _supported_efforts(litellm_provider, model)
+        if provider and model
+        else ()
     )
     model_key = f"{provider}/{model}"
     stored = agent.context.get_data(CONTEXT_KEY) if getattr(agent, "context", None) else None
@@ -239,12 +265,15 @@ def get_state(agent) -> dict[str, Any]:
         selected = normalize_effort(stored.get("effort"))
 
     kwargs = config.get("kwargs") if isinstance(config.get("kwargs"), dict) else {}
-    preset_effort = normalize_effort(kwargs.get("reasoning_effort"))
+    preset_effort = normalize_effort(
+        kwargs.get("reasoning_effort")
+        or (kwargs.get("extra_body") or {}).get("reasoning_effort")
+    )
 
     state = {
         "available": bool(efforts),
         "support": "supported" if efforts else "unknown",
-        "option_source": "glm53" if is_glm53_model else ("litellm" if efforts else "none"),
+        "option_source": "declared" if declared else ("glm53" if is_glm53_model else ("litellm" if efforts else "none")),
         "model": {"provider": provider, "name": model, "key": model_key},
         "options": [
             {
@@ -289,6 +318,7 @@ if __name__ == "__main__":
         }
     ) == ("medium", "high", "xhigh")
     assert _effort_label("xhigh", "anthropic", "claude-opus") == "Extra"
+    assert supported_efforts_for("openai", "glm-5.2", declared_efforts=("high", "max")) == ("high", "max")
     assert normalize_effort(" Extra ") == "extra"
     assert normalize_effort("bad value") == ""
     assert normalize_effort("x" * 65) == ""
